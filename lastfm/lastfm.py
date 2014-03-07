@@ -6,6 +6,7 @@ __module_description__ = "/np for last.fm"
 
 from xchat import hook_command, command, EAT_ALL
 #from stdout import hook_command, command, EAT_ALL
+import subprocess
 import sys
 import time
 import urllib.request
@@ -78,34 +79,39 @@ def getTags(artist, track):
 	seen_add = seen.add
 	tags = [tag for tag in tags if tag['name'] not in seen and not seen_add(tag['name'])]
 
-	tags = ', '.join(map(lambda tag: tag['name'], tags[:3]))
+	tags = '\00314,\0031 '.join(map(lambda tag: tag['name'], tags[:3]))
 	if tags != '':
-		tags = '({})'.format(tags)
+		tags = '\00314(\0031{}\00314)'.format(tags)
 
 	return tags
 
 def np(user):
 	# get currently playing song
-	recent = fetch('user.getRecentTracks', {'user' : username, 'limit': '1', 'extended': '1'})['recenttracks']['track']
+#	recent = fetch('user.getRecentTracks', {'user' : username, 'limit': '1', 'extended': '1'})['recenttracks']['track']
 
-	if type(recent) == list:
-		recent = recent[0]
+#	if type(recent) == list:
+#		recent = recent[0]
 
-	try:
-		artist = recent['artist']['name']
-		track  = recent['name']
-		loved  = '♥' if recent['loved'] == '1' else ''
-	except Exception as e:
-		try:
-			return recent['error']
-		except:
-			return e
+#	try:
+#		artist = recent['artist']['name']
+#		track  = recent['name']
+#		loved  = '♥' if recent['loved'] == '1' else ''
+#	except Exception as e:
+#		try:
+#			return recent['error']
+#		except:
+#			return e
+	artist=subprocess.check_output("banshee --query-artist | sed 's/^artist: //'", shell=True).decode("utf-8").rstrip('\n')
+	track =subprocess.check_output("banshee --query-title  | sed 's/^title: //'",  shell=True).decode("utf-8").rstrip('\n')
+	album =subprocess.check_output("banshee --query-album  | sed 's/^album: //'",  shell=True).decode("utf-8").rstrip('\n')
+	year  =subprocess.check_output("banshee --query-year   | sed 's/^year: //'",   shell=True).decode("utf-8").rstrip('\n')
 
 	# get song tags
 	tags = getTags(artist, track)
 	
 	# return np text
-	return 'np: {} - {} {} {}'.format(artist, track, tags, loved)
+	
+	return '\00315\002now playing \0034»»\017 \0039{} \0032\002-\017 \0039{} \0032\002[\017\0038 {}\0035,\0037 {} \0032\002] \0034««\017 {}'.format(artist, track, album, year, tags)
 
 
 def np_hook(word,word_eol,userdata):
